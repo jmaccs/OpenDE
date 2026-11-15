@@ -43,10 +43,12 @@ namespace {
         dx::objects::flushLoads();
     }
 
+    // The packages of the game, in the order the ini lists them. A script may name a class of any of them, so
+    // they are all loaded before compiling: their classes have to exist for the compiler to find them. A package
+    // that is about to be built from its sources is left out, so it is built rather than loaded.
     void loadGamePackages(const std::vector<std::string>& exclude)
     {
-        const char* packages[] = { "Core", "Engine", "Extension", "ConSys", "DeusExText", "DeusEx" };
-        for (const char* package : packages) {
+        for (const std::string& package : dx::config::system().getAll("Editor.EditorEngine", "EditPackages")) {
             bool skipped = false;
             for (const std::string& name : exclude) {
                 if (lower(package) == lower(name)) {
