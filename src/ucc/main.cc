@@ -43,6 +43,28 @@ namespace {
         dx::objects::flushLoads();
     }
 
+    void loadGamePackages(const std::vector<std::string>& exclude)
+    {
+        const char* packages[] = { "Core", "Engine", "Extension", "ConSys", "DeusExText", "DeusEx" };
+        for (const char* package : packages) {
+            bool skipped = false;
+            for (const std::string& name : exclude) {
+                if (lower(package) == lower(name)) {
+                    skipped = true;
+                    break;
+                }
+            }
+            if (skipped) {
+                continue;
+            }
+            dx::Linker* linker = dx::objects::loadPackage(dx::Name(package));
+            if (!linker) {
+                continue;
+            }
+            loadFully(linker);
+        }
+    }
+
     dx::Linker* loadForExport(const std::string& file)
     {
         std::string packageName = std::filesystem::path(file).stem().string();
@@ -90,6 +112,7 @@ namespace {
             std::fprintf(stderr, "usage: ucc batchexport <package> <classname> <extension> <directory>\n");
             return 1;
         }
+        loadGamePackages({ std::filesystem::path(args[0]).stem().string() });
         dx::Linker* linker = loadForExport(args[0]);
         if (!linker) {
             return 1;
@@ -128,6 +151,7 @@ namespace {
             std::fprintf(stderr, "usage: ucc exportsources <package> <directory>\n");
             return 1;
         }
+        loadGamePackages({ std::filesystem::path(args[0]).stem().string() });
         dx::Linker* linker = loadForExport(args[0]);
         if (!linker) {
             return 1;
@@ -310,10 +334,27 @@ namespace {
         return true;
     }
 
+    std::vector<std::string> packagesToBuild(const std::filesystem::path& root, const std::filesystem::path& user, const std::vector<std::string>& packages)
+    {
+        std::vector<std::string> names;
+        for (const std::string& name : packages) {
+            if (std::filesystem::exists(user / "System" / (name + ".u"))) {
+                continue;
+            }
+            if (std::filesystem::is_directory(user / name / "Classes")) {
+                names.push_back(name);
+            } else if (!std::filesystem::exists(root / "System" / (name + ".u")) && std::filesystem::is_directory(root / name / "Classes")) {
+                names.push_back(name);
+            }
+        }
+        return names;
+    }
+
     int make(const std::filesystem::path& root)
     {
         std::filesystem::path user = dx::config::userDirectory();
         std::vector<std::string> packages = dx::config::system().getAll("Editor.EditorEngine", "EditPackages");
+        loadGamePackages(packagesToBuild(root, user, packages));
         for (const std::string& name : packages) {
             std::printf("--------------------%s--------------------\n", name.c_str());
             std::filesystem::path output = user / "System" / (name + ".u");
