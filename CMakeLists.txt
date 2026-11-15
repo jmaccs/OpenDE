@@ -17,6 +17,12 @@ if(NOT CMAKE_BUILD_TYPE)
     )
 endif()
 
+# Minimum macOS version: 11.0 is the first Apple Silicon release. Without this
+# the host OS SDK version is baked in and binaries only run on that OS or newer.
+if(APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version to target" FORCE)
+endif()
+
 # Enable ccache
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
@@ -61,7 +67,11 @@ add_library(miniaudio STATIC ${CMAKE_SOURCE_DIR}/vendor/miniaudio/miniaudio.c)
 target_include_directories(miniaudio SYSTEM PUBLIC ${CMAKE_SOURCE_DIR}/vendor/miniaudio)
 target_compile_definitions(miniaudio PUBLIC MA_NO_ENCODING MA_NO_GENERATION)
 find_package(Threads REQUIRED)
-target_link_libraries(miniaudio PUBLIC Threads::Threads ${CMAKE_DL_LIBS} m)
+if(APPLE)
+    target_link_libraries(miniaudio PUBLIC Threads::Threads ${CMAKE_DL_LIBS})
+else()
+    target_link_libraries(miniaudio PUBLIC Threads::Threads ${CMAKE_DL_LIBS} m)
+endif()
 
 # Dear ImGui
 add_library(imgui STATIC

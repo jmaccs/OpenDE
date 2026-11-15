@@ -15,6 +15,26 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   list(APPEND DEUSEX_WARNINGS -Wno-double-promotion -Wno-unneeded-internal-declaration -Wno-unused-but-set-variable)
 endif()
 
+# Static libstdc++/libgcc only exist on Linux and MinGW; Apple clang rejects
+# -static-libgcc outright and macOS uses libc++.
+if(APPLE OR EMSCRIPTEN)
+  set(DX_STATIC_LINK_FLAGS "")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR MINGW)
+  set(DX_STATIC_LINK_FLAGS -static-libstdc++ -static-libgcc)
+else()
+  set(DX_STATIC_LINK_FLAGS "")
+endif()
+
+# Debug assertions are library-specific: _GLIBCXX_ASSERTIONS only affects
+# libstdc++, so use the libc++ hardening mode when building against libc++.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(DX_DEBUG_ASSERT_DEFINE -D_GLIBCXX_ASSERTIONS)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(DX_DEBUG_ASSERT_DEFINE -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE)
+else()
+  set(DX_DEBUG_ASSERT_DEFINE "")
+endif()
+
 # Sanitizers
 set(SANITIZER "none" CACHE STRING "Sanitizer to build with: none, asan, tsan")
 set_property(CACHE SANITIZER PROPERTY STRINGS none asan tsan)
@@ -86,7 +106,9 @@ if(NOT EMSCRIPTEN)
   add_executable(ucc ${DX_UCC_SOURCES})
   target_link_libraries(ucc PRIVATE dx-compiler SDL2::SDL2-static)
   target_compile_definitions(ucc PRIVATE DEUSEX_GAME_DATA="${DEUSEX_GAME_DATA}")
-  target_link_options(ucc PRIVATE -static-libstdc++ -static-libgcc)
+  if(DX_STATIC_LINK_FLAGS)
+    target_link_options(ucc PRIVATE ${DX_STATIC_LINK_FLAGS})
+  endif()
   list(APPEND DX_TARGETS ucc)
 endif()
 
@@ -96,7 +118,9 @@ if(DX_EDITOR_SOURCES)
   target_link_libraries(deused PRIVATE dx-render dx-compiler imgui imguizmo SDL2::SDL2-static SDL2::SDL2main)
   target_include_directories(deused SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/vendor/icons)
   target_compile_definitions(deused PRIVATE DEUSEX_GAME_DATA="${DEUSEX_GAME_DATA}")
-  target_link_options(deused PRIVATE -static-libstdc++ -static-libgcc)
+  if(DX_STATIC_LINK_FLAGS)
+    target_link_options(deused PRIVATE ${DX_STATIC_LINK_FLAGS})
+  endif()
   list(APPEND DX_TARGETS deused)
 endif()
 
@@ -109,10 +133,10 @@ foreach(tgt ${DX_TARGETS})
   endif()
 
   target_compile_options(${tgt} PRIVATE
-    $<$<CONFIG:Debug>:-D_GLIBCXX_ASSERTIONS>
+    $<$<CONFIG:Debug>:${DX_DEBUG_ASSERT_DEFINE}>
   )
 endforeach()
 
-if(NOT EMSCRIPTEN)
-  target_link_options(deusex PRIVATE -static-libstdc++ -static-libgcc)
+if(NOT EMSCRIPTEN AND DX_STATIC_LINK_FLAGS)
+  target_link_options(deusex PRIVATE ${DX_STATIC_LINK_FLAGS})
 endif()
