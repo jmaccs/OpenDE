@@ -234,6 +234,68 @@ TEST_CASE("ucc make rebuilds Core on its own", "[data]")
     std::filesystem::remove_all(home);
 }
 
+TEST_CASE("ucc make resolves classes declared after the files that reference them", "[data]")
+{
+    const char* xdg = std::getenv("XDG_DATA_HOME");
+    REQUIRE(xdg != nullptr);
+    std::filesystem::path home = std::filesystem::path(xdg) / "ucc-forward";
+    std::filesystem::remove_all(home);
+    std::filesystem::path user = home / "deusex";
+    std::filesystem::create_directories(user / "UCFwdMod" / "Classes");
+    {
+        std::ifstream in(std::filesystem::path(DEUSEX_GAME_DATA) / "System" / "DeusEx.ini", std::ios::binary);
+        std::stringstream ini;
+        ini << in.rdbuf();
+        std::string text = ini.str();
+        size_t last = text.rfind("EditPackages=");
+        REQUIRE(last != std::string::npos);
+        text.insert(text.find('\n', last) + 1, "EditPackages=UCFwdMod\r\n");
+        std::ofstream out(user / "DeusEx.ini", std::ios::binary);
+        out << text;
+    }
+    {
+        // UCFwdChild sorts before UCFwdZBase, so the base class is unknown when the
+        // child is imported and can only be resolved once its own script is parsed.
+        std::ofstream out(user / "UCFwdMod" / "Classes" / "UCFwdChild.uc", std::ios::binary);
+        out << "class UCFwdChild extends UCFwdZBase;\r\n\r\nvar UCFwdZBase Other;\r\nvar Conversation con;\r\n";
+    }
+    {
+        std::ofstream out(user / "UCFwdMod" / "Classes" / "UCFwdZBase.uc", std::ios::binary);
+        out << "class UCFwdZBase extends Object;\r\n\r\nvar int Value;\r\nvar UCFwdChild First;\r\n";
+    }
+    std::filesystem::path log = home / "make.log";
+    REQUIRE(run("XDG_DATA_HOME=\"" + home.string() + "\" \"" UCC_PATH "\" make > \"" + log.string() + "\" 2>&1") == 0);
+    std::filesystem::path built = user / "System" / "UCFwdMod.u";
+    REQUIRE(std::filesystem::exists(built));
+
+    dx::engine::initialize(DEUSEX_GAME_DATA);
+    dx::Linker* linker = dx::objects::loadPackageFile(dx::Name("UCFwdMod"), built, false);
+    REQUIRE(linker != nullptr);
+    for (size_t i = 0; i < linker->file().exports().size(); i++) {
+        dx::objects::ensureLoaded(linker->object(static_cast<int32_t>(i + 1)));
+    }
+    dx::objects::flushLoads();
+    dx::UClass* child = dx::objects::findClass("UCFwdMod.UCFwdChild");
+    dx::UClass* base = dx::objects::findClass("UCFwdMod.UCFwdZBase");
+    REQUIRE(child != nullptr);
+    REQUIRE(base != nullptr);
+    CHECK(child->superClass() == base);
+    REQUIRE(child->defaultObject != nullptr);
+    REQUIRE(base->defaultObject != nullptr);
+    CHECK(base->size > 0);
+    dx::UProperty* other = child->findProperty(dx::Name("Other"));
+    REQUIRE(other != nullptr);
+    CHECK(other->offset == base->size);
+    CHECK(other->objectClass == base);
+    dx::UProperty* con = child->findProperty(dx::Name("con"));
+    REQUIRE(con != nullptr);
+    CHECK(con->offset == other->offset + 8);
+    CHECK(child->size == con->offset + 8);
+    REQUIRE(dx::objects::findClass("ConSys.Conversation") != nullptr);
+    CHECK(con->objectClass == dx::objects::findClass("ConSys.Conversation"));
+    std::filesystem::remove_all(home);
+}
+
 TEST_CASE("ucc make reports script errors with file and line and writes no package", "[data]")
 {
     struct BrokenScript {
