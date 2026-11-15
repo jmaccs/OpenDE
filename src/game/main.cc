@@ -645,7 +645,12 @@ namespace {
             }
             std::string target = url;
             if (world && !target.empty() && target[0] == '?') {
-                target = world->url.substr(0, world->url.find('?')) + target;
+                std::string map = world->url.substr(0, world->url.find('?'));
+                size_t portal = map.find('#');
+                if (portal != std::string::npos) {
+                    map = map.substr(0, portal);
+                }
+                target = map + target;
             }
             int32_t loadIndex = 0;
             bool loading = dx::savegame::loadRequested(target, loadIndex);

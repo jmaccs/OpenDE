@@ -38,24 +38,44 @@ namespace dx {
 
     std::string travelUrl(const std::string& base, const std::string& text, int32_t travelType)
     {
+        std::string baseMap = base;
+        std::string basePortal;
+        size_t baseHash = baseMap.find('#');
+        if (baseHash != std::string::npos) {
+            basePortal = baseMap.substr(baseHash + 1);
+            baseMap = baseMap.substr(0, baseHash);
+        }
         std::vector<std::string> options;
         if (travelType == TRAVEL_Relative || travelType == TRAVEL_Partial) {
-            for (const std::string& option : urlOptions(base)) {
+            for (const std::string& option : urlOptions(baseMap)) {
                 if (!iequals(option, "PUSH") && !iequals(option, "POP") && !iequals(option, "PEER") && !iequals(option, "LOAD")) {
                     options.push_back(option);
                 }
             }
         }
-        std::string map = text.substr(0, text.find('?'));
-        if (map.empty()) {
-            map = base.substr(0, base.find('?'));
+        std::string body = text;
+        std::string portal;
+        size_t hash = body.find('#');
+        if (hash != std::string::npos) {
+            portal = body.substr(hash + 1);
+            body = body.substr(0, hash);
         }
-        for (const std::string& option : urlOptions(text)) {
+        std::string map = body.substr(0, body.find('?'));
+        if (map.empty()) {
+            map = baseMap.substr(0, baseMap.find('?'));
+            if (portal.empty()) {
+                portal = basePortal;
+            }
+        }
+        for (const std::string& option : urlOptions(body)) {
             addOption(options, option);
         }
         std::string result = map;
         for (const std::string& option : options) {
             result += "?" + option;
+        }
+        if (!portal.empty()) {
+            result += "#" + portal;
         }
         return result;
     }

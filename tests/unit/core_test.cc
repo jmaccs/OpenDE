@@ -479,6 +479,22 @@ TEST_CASE("relative and partial travel inherit the current URL options like FURL
     CHECK(dx::travelUrl(base, "02_NYC_BatteryPark?Name=X", dx::TRAVEL_Absolute) == "02_NYC_BatteryPark?Name=X");
 }
 
+TEST_CASE("travel URLs put options before the portal fragment like FURL")
+{
+    // The portal names the arrival marker in the destination level. It has to
+    // stay last, or parseUrl turns the options into part of the portal name
+    // and the player spawns at the level's default PlayerStart instead.
+    CHECK(dx::travelUrl("02_NYC_Bar?Name=Player?Class=DeusEx.JCDentonMale", "02_NYC_Street#FromBarFrontEntrance", dx::TRAVEL_Relative) == "02_NYC_Street?Name=Player?Class=DeusEx.JCDentonMale#FromBarFrontEntrance");
+    CHECK(dx::travelUrl("02_NYC_Bar", "02_NYC_Street#FromBarFrontEntrance", dx::TRAVEL_Relative) == "02_NYC_Street#FromBarFrontEntrance");
+    CHECK(dx::travelUrl("02_NYC_Bar", "02_NYC_Street", dx::TRAVEL_Relative) == "02_NYC_Street");
+    CHECK(dx::travelUrl("02_NYC_Bar", "02_NYC_Street?Name=Player#FromBarFrontEntrance", dx::TRAVEL_Relative) == "02_NYC_Street?Name=Player#FromBarFrontEntrance");
+    CHECK(dx::travelUrl("02_NYC_Bar?Name=Player#FromBar", "", dx::TRAVEL_Relative) == "02_NYC_Bar?Name=Player#FromBar");
+    CHECK(dx::travelUrl("02_NYC_Bar?Name=Player#FromBar", "?Name=Paul", dx::TRAVEL_Relative) == "02_NYC_Bar?Name=Paul#FromBar");
+    CHECK(dx::travelUrl("02_NYC_Bar?Name=Player#FromBar", "02_NYC_Street#FromStreet", dx::TRAVEL_Relative) == "02_NYC_Street?Name=Player#FromStreet");
+    CHECK(dx::travelUrl("02_NYC_Bar?Name=Player#FromBar", "02_NYC_Street", dx::TRAVEL_Relative) == "02_NYC_Street?Name=Player");
+    CHECK(dx::travelUrl("02_NYC_Bar?Name=Player", "02_NYC_Street#FromBarFrontEntrance", dx::TRAVEL_Absolute) == "02_NYC_Street#FromBarFrontEntrance");
+}
+
 TEST_CASE("a subclass created at runtime inherits the parent's defaults, functions and states", "[data]")
 {
     initEngine();
