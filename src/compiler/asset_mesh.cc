@@ -98,7 +98,9 @@ namespace dx::compiler {
 
         bool writeFile(const std::filesystem::path& path, const std::vector<uint8_t>& data)
         {
-            std::filesystem::create_directories(path.parent_path());
+            if (path.has_parent_path()) {
+                std::filesystem::create_directories(path.parent_path());
+            }
             std::ofstream out(path, std::ios::binary | std::ios::trunc);
             out.write(reinterpret_cast<const char*>(data.data()), static_cast<std::streamsize>(data.size()));
             return static_cast<bool>(out);

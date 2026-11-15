@@ -584,7 +584,11 @@ namespace dx {
             file.patchU32(countsAt + 16, static_cast<uint32_t>(imports.size()));
             file.patchU32(countsAt + 20, static_cast<uint32_t>(importOffset));
 
-            std::filesystem::create_directories(path.parent_path());
+            // A file with no directory of its own: its parent is empty, and there is nothing to make.
+            std::filesystem::path parent = path.parent_path();
+            if (!parent.empty()) {
+                std::filesystem::create_directories(parent);
+            }
             std::filesystem::path temporary = path;
             temporary += ".tmp";
             {

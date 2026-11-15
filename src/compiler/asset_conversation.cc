@@ -328,7 +328,9 @@ namespace dx::compiler {
             void save(UObject* package, const std::filesystem::path& path)
             {
                 std::string error;
-                std::filesystem::create_directories(path.parent_path());
+                if (path.has_parent_path()) {
+                    std::filesystem::create_directories(path.parent_path());
+                }
                 if (!saveScriptPackage(package, path, &error)) {
                     context.log("Failed to save " + path.string() + ": " + error);
                 }
@@ -987,7 +989,9 @@ namespace dx::compiler {
                 std::string path = file.string();
                 std::replace(path.begin(), path.end(), '\\', '/');
                 file = path;
-                std::filesystem::create_directories(file.parent_path());
+                if (file.has_parent_path()) {
+                    std::filesystem::create_directories(file.parent_path());
+                }
                 std::ofstream stream(file, std::ios::binary);
                 stream.write(reinterpret_cast<const char*>(out.data.data()), static_cast<std::streamsize>(out.data.size()));
                 return static_cast<bool>(stream) && success;
@@ -1076,7 +1080,9 @@ namespace dx::compiler {
                     return;
                 }
                 writtenAudio.emplace(file.string(), sound);
-                std::filesystem::create_directories(file.parent_path());
+                if (file.has_parent_path()) {
+                    std::filesystem::create_directories(file.parent_path());
+                }
                 std::ofstream stream(file, std::ios::binary);
                 stream.write(reinterpret_cast<const char*>(sound->bytes.data()), static_cast<std::streamsize>(sound->bytes.size()));
                 success = success && static_cast<bool>(stream);
