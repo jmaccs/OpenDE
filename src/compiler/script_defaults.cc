@@ -272,6 +272,11 @@ namespace dx::compiler::detail {
 
     void importDefaults(PackageCompiler::Impl& context, UClass* cls, const std::string& text)
     {
+        if (!cls->defaultObject) {
+            context.log(cls->pathName() + ": Class has no default object");
+            context.errorCount++;
+            return;
+        }
         size_t at = 0;
         while (at < text.size()) {
             size_t end = text.find_first_of("\r\n", at);

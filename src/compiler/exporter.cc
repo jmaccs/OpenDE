@@ -219,7 +219,9 @@ namespace dx::compiler {
     {
         std::vector<uint8_t> buffer(std::max<size_t>(cls->size, 1));
         cls->initValue(buffer.data());
-        cls->copyValue(buffer.data(), cls->defaultObject->data);
+        if (cls->defaultObject) {
+            cls->copyValue(buffer.data(), cls->defaultObject->data);
+        }
         UClass* root = cls;
         while (root->superClass()) {
             root = root->superClass();

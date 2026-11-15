@@ -330,7 +330,9 @@ namespace dx::compiler {
                 package.writeObject(out, cls->within);
                 package.writeName(out, cls->configName);
                 UClass* parent = cls->superClass();
-                package.writeTaggedProperties(out, cls, cls->defaultObject->data, parent ? parent->defaultObject->data : nullptr, parent ? parent->size : 0);
+                const uint8_t* defaults = cls->defaultObject ? cls->defaultObject->data : nullptr;
+                const uint8_t* parentDefaults = parent && parent->defaultObject ? parent->defaultObject->data : nullptr;
+                package.writeTaggedProperties(out, cls, defaults, parentDefaults, parent ? parent->size : 0);
             } else if (UFunction* function = cast<UFunction>(object)) {
                 writeStruct(package, out, function);
                 out.i16(static_cast<int16_t>(function->nativeIndex));

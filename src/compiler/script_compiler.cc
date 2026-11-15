@@ -76,6 +76,9 @@ namespace dx::compiler {
 
         void resetDefaults(UClass* cls)
         {
+            if (!cls->defaultObject) {
+                cls->linkClass();
+            }
             uint8_t* data = cls->defaultObject->data;
             cls->destroyValue(data);
             cls->initValue(data);
@@ -209,8 +212,14 @@ namespace dx::compiler {
         };
         UClass* result = inPackage(className);
         bool updateNative = result && (result->flags & RF_Native);
-        if (result && result->defaultObject) {
-            result->defaultObject->destroyed = true;
+        if (result) {
+            if (result->defaultObject) {
+                result->defaultObject->destroyed = true;
+            }
+            auto forward = std::find(impl->forwardClasses.begin(), impl->forwardClasses.end(), result);
+            if (forward != impl->forwardClasses.end()) {
+                impl->forwardClasses.erase(forward);
+            }
             result->defaultObject = nullptr;
             result->linked = false;
             result->properties.clear();
@@ -232,7 +241,7 @@ namespace dx::compiler {
             }
             if (!base && !baseClassName.empty()) {
                 base = detail::createField(new UClass(), impl->package, Name(baseClassName), nullptr, RF_Public | RF_Standalone);
-                base->superField = result;
+                impl->forwardClasses.push_back(base);
                 lookup.add(base);
             }
             result->superField = base;
@@ -250,6 +259,14 @@ namespace dx::compiler {
     bool PackageCompiler::compile()
     {
         Impl& context = *impl;
+        if (!context.forwardClasses.empty()) {
+            for (UClass* cls : context.forwardClasses) {
+                context.log("Unrecognized type '" + cls->name.str() + "'");
+                context.errorCount++;
+            }
+            context.forwardClasses.clear();
+            return false;
+        }
         std::vector<UClass*> allClasses;
         for (UObject* object : objects::all()) {
             if (UClass* cls = cast<UClass>(object)) {

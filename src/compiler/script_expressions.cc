@@ -179,7 +179,10 @@ namespace dx::compiler::detail {
                 resultType.metaClass = ownerClass(scope);
             }
             if (property->name == n.outer && property->outer == objects::objectClass()) {
-                resultType.ref = ownerClass(scope)->within;
+                UClass* owner = ownerClass(scope);
+                if (owner && owner->within) {
+                    resultType.ref = owner->within;
+                }
             }
             return true;
         }

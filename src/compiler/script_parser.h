@@ -22,6 +22,7 @@ namespace dx::compiler {
         std::unordered_map<UClass*, std::filesystem::path> files;
         std::vector<Name> nativeClasses;
         std::vector<std::pair<UClass*, std::string>> pendingExecs;
+        std::vector<UClass*> forwardClasses;
         int errorCount = 0;
     };
 
