@@ -3,6 +3,10 @@ build/
 build-*/
 game-data/
 demo-data/
+*.app/
+.DS_Store
+# A sibling checkout of the DeusEdix editor, used for the native port
+DeusEdix/
 vendor/**/Makefile
 CMakeLists.txt.user
 CMakeCache.txt
