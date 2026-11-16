@@ -60,6 +60,15 @@ add_library(dx-engine STATIC ${DX_ENGINE_SOURCES})
 target_include_directories(dx-engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(dx-engine PUBLIC miniaudio SDL2::SDL2-static)
 
+# The walkable area's router (engine/nav_route.cc) has UnrealScript's arithmetic, float for float: a compiler or CPU
+# that contracts a multiply and an add into one fused operation would round the corners differently. Keep it off.
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+  set_source_files_properties(
+    ${CMAKE_CURRENT_SOURCE_DIR}/engine/nav_route.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/engine/nav_native.cc
+    PROPERTIES COMPILE_OPTIONS "-ffp-contract=off")
+endif()
+
 file(GLOB DX_RENDER_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/render/*.cc)
 add_library(dx-render STATIC ${DX_RENDER_SOURCES})
 target_include_directories(dx-render PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

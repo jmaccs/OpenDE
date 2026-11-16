@@ -6,6 +6,7 @@
 #include "engine/ai.h"
 #include "engine/console.h"
 #include "engine/mesh.h"
+#include "engine/nav_native.h"
 #include "engine/resources.h"
 #include "engine/world.h"
 
@@ -1301,6 +1302,7 @@ namespace dx {
             registerAINatives();
             registerPawnNatives();
             registerMiscNatives();
+            registerNavNatives();
         }
     }
 }
